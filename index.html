@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Student Database</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-wrapper" style="max-width: 1100px; width: 95%;">
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="color: #818cf8;">Admin Dashboard</h1>
+            <p>Managing Class 10 & 12 Registrations</p>
+        </div>
+        <div class="filters" style="display: flex; gap: 10px;">
+            <select id="filterClass" style="width: auto; padding: 10px;">
+                <option value="all">All Students</option>
+                <option value="Class_10">Class 10 Only</option>
+                <option value="Class_12">Class 12 Only</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="table-container" style="overflow-x: auto; background: rgba(255,255,255,0.05); border-radius: 15px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: rgba(99, 102, 241, 0.2);">
+                <tr>
+                    <th style="padding: 15px;">Roll No</th>
+                    <th>Full Name</th>
+                    <th>Phone Number</th>
+                    <th>Class</th>
+                    <th>Registration Date</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+                <tr><td colspan="5" style="text-align: center; padding: 20px;">Fetching records...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, query, getDocs, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCn-daa5vuBXt91rq5pkX77VBFaOpgTzyU",
+        authDomain: "project-1-ef1b4.firebaseapp.com",
+        projectId: "project-1-ef1b4",
+        storageBucket: "project-1-ef1b4.firebasestorage.app",
+        messagingSenderId: "1071465062323",
+        appId: "1:1071465062323:web:1a83624b05e6bb485835c6",
+        measurementId: "G-7SMM6VVE6V"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function loadLogs(filter = 'all') {
+        const tbody = document.getElementById('logTableBody');
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading...</td></tr>';
+
+        try {
+            let q = query(collection(db, "registered_students"), orderBy("roll_no", "asc"));
+            
+            if (filter !== 'all') {
+                q = query(collection(db, "registered_students"), where("class", "==", filter), orderBy("roll_no", "asc"));
+            }
+
+            const snapshot = await getDocs(q);
+            tbody.innerHTML = '';
+
+            if (snapshot.empty) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No students registered yet.</td></tr>';
+                return;
+            }
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const date = data.registered_at ? new Date(data.registered_at.toDate()).toLocaleDateString() : "N/A";
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <td style="padding: 15px;"><strong>${data.roll_no}</strong></td>
+                        <td>${data.name}</td>
+                        <td><span style="background: #334155; padding: 5px 10px; border-radius: 5px;">${data.phone}</span></td>
+                        <td>${data.class.replace('_', ' ')}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            });
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error: Missing Permissions (Check Firestore Rules)</td></tr>';
+        }
+    }
+
+    document.getElementById('filterClass').addEventListener('change', (e) => loadLogs(e.target.value));
+    loadLogs();
+</script>
+</body>
+</html>
+
